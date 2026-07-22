@@ -164,7 +164,7 @@
             </li>
             <li class="relative leading-relaxed">
                 <a href="#kendala-section" class="text-sm font-medium block pl-2 text-decoration-none flex items-center gap-2">
-                    <i class="ph ph-warning text-rose-400 text-base"></i> Kendala
+                    <i class="ph ph-warning text-rose-400 text-base"></i> Widget Kendala
                 </a>
             </li>
             <li class="relative leading-relaxed">
@@ -247,7 +247,7 @@
                 </div>
             </div>
 
-            <!-- Widget 5: Rata-rata Progres -->
+            <!-- Widget 5: Rata-rata Progres (Total Ada / Jumlah Bidang) -->
             <div class="card-body flex items-center justify-between gap-3 border-l-4 border-amber-500 sm:col-span-2 lg:col-span-1">
                 <div>
                     <p class="text-[11px] text-slate-400 uppercase font-bold tracking-wider m-0">Rata-rata Progres</p>
@@ -447,7 +447,12 @@
             fetchHistoryData();
             fetchKendalaData();
             
-          
+            // Auto update senyap setiap 5 detik di latar belakang
+            setInterval(() => {
+                fetchData();
+                fetchHistoryData();
+                fetchKendalaData();
+            }, 5000);
         });
 
         function manualRefreshData() {
@@ -796,14 +801,12 @@
 
             const provCol = findColumn(headers, ['provinsi', 'prov']);
             const bidangCol = findColumn(headers, ['jumlah bidang', 'bidang', 'total bidang']);
-            const progresCol = findColumn(headers, ['progres', 'persentase', 'progress', '%']);
             
             const adaCol = findColumn(headers, ['ada']);
             const tidakAdaCol = findColumn(headers, ['tidak ada', 'tidakad']);
 
             let uniqueProvincesCount = 0;
             let totalBidang = 0;
-            let totalProgres = 0;
             let sumAda = 0;
             let sumTidakAda = 0;
 
@@ -820,7 +823,6 @@
 
                 filteredData.forEach(row => {
                     if (bidangCol) totalBidang += parseNumeric(row[bidangCol]);
-                    if (progresCol) totalProgres += parseNumeric(row[progresCol]);
                     if (adaCol) sumAda += parseNumeric(row[adaCol]);
                     if (tidakAdaCol) sumTidakAda += parseNumeric(row[tidakAdaCol]);
                 });
@@ -831,7 +833,8 @@
             ui.widgetTotalAda.textContent = sumAda.toLocaleString('id-ID');
             ui.widgetTotalTidakAda.textContent = sumTidakAda.toLocaleString('id-ID');
             
-            let avgProgres = filteredData.length > 0 ? (totalProgres / filteredData.length) : 0;
+            // PERBAIKAN: Rata-rata Progres dihitung dari Total Ada dibagi Jumlah Bidang (dikali 100)
+            let avgProgres = totalBidang > 0 ? (sumAda / totalBidang) * 100 : 0;
             ui.widgetRataProgres.textContent = avgProgres.toFixed(2) + "%";
 
             updateRatioChart(sumAda, sumTidakAda);
