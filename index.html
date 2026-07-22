@@ -247,7 +247,7 @@
                 </div>
             </div>
 
-            <!-- Widget 5: Rata-rata Progres (Total Ada / Jumlah Bidang) -->
+            <!-- Widget 5: Rata-rata Progres -->
             <div class="card-body flex items-center justify-between gap-3 border-l-4 border-amber-500 sm:col-span-2 lg:col-span-1">
                 <div>
                     <p class="text-[11px] text-slate-400 uppercase font-bold tracking-wider m-0">Rata-rata Progres</p>
@@ -376,7 +376,7 @@
                             <th class="px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-center">Tanggal</th>
                             <th class="px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-center">Provinsi</th>
                             <th class="px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-center">PIC</th>
-                            <th class="px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-center w-48">Nilai</th>
+                            <th class="px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-center w-48">Total Ada</th>
                         </tr>
                     </thead>
                     <tbody id="history-table-body" class="divide-y divide-slate-100 text-sm font-medium">
@@ -446,13 +446,6 @@
             fetchData();
             fetchHistoryData();
             fetchKendalaData();
-            
-            // Auto update senyap setiap 5 detik di latar belakang
-            setInterval(() => {
-                fetchData();
-                fetchHistoryData();
-                fetchKendalaData();
-            }, 5000);
         });
 
         function manualRefreshData() {
@@ -833,7 +826,6 @@
             ui.widgetTotalAda.textContent = sumAda.toLocaleString('id-ID');
             ui.widgetTotalTidakAda.textContent = sumTidakAda.toLocaleString('id-ID');
             
-            // PERBAIKAN: Rata-rata Progres dihitung dari Total Ada dibagi Jumlah Bidang (dikali 100)
             let avgProgres = totalBidang > 0 ? (sumAda / totalBidang) * 100 : 0;
             ui.widgetRataProgres.textContent = avgProgres.toFixed(2) + "%";
 
@@ -912,7 +904,7 @@
                         historyData = [];
                         const provCol = findColumn(headers, ['provinsi', 'prov']);
                         const picCol = findColumn(headers, ['pic', 'penanggung jawab']);
-                        const targetCol = getTargetColumn(headers);
+                        const adaCol = findColumn(headers, ['ada']);
                         
                         if (rawData && rawData.length > 0) {
                             const sampleData = rawData.slice(0, 5);
@@ -921,11 +913,11 @@
                                 tanggal: formattedYesterday,
                                 provinsi: provCol ? row[provCol] : '-',
                                 pic: picCol ? row[picCol] : '-',
-                                nilai: targetCol ? row[targetCol] : '0'
+                                nilaiAda: adaCol ? row[adaCol] : '0'
                             }));
                         } else {
                             historyData = [
-                                { tanggal: formattedYesterday, provinsi: 'Jawa Barat', pic: 'Fikri', nilai: '800' }
+                                { tanggal: formattedYesterday, provinsi: 'Jawa Barat', pic: 'Fikri', nilaiAda: '800' }
                             ];
                         }
                         
@@ -980,14 +972,17 @@
                 const dateKey = Object.keys(row).find(k => k.toLowerCase().includes('tanggal') || k.toLowerCase().includes('date')) || 'tanggal';
                 const provKey = Object.keys(row).find(k => k.toLowerCase().includes('prov')) || 'provinsi';
                 const picKey = Object.keys(row).find(k => k.toLowerCase().includes('pic') || k.toLowerCase().includes('jawab')) || 'pic';
-                const valKey = Object.keys(row).find(k => k.toLowerCase().includes('progres') || k.toLowerCase().includes('persentase') || k.toLowerCase().includes('%') || k.toLowerCase().includes('nilai')) || Object.keys(row)[2] || 'nilai';
+                
+                // Mengambil data spesifik dari kolom "ada" pada baris histori
+                const adaKey = Object.keys(row).find(k => k.toLowerCase() === 'ada' || k.toLowerCase().includes('ada')) || Object.keys(row)[3] || 'nilaiAda';
+                let valAda = row[adaKey] !== undefined ? row[adaKey] : (row.nilaiAda || '0');
 
                 tr.innerHTML = `
                     <td class="px-4 py-2.5 text-center text-slate-400 font-medium">${index + 1}</td>
                     <td class="px-4 py-2.5 text-slate-700 text-center">${row[dateKey] || '-'}</td>
                     <td class="px-4 py-2.5 text-slate-800 font-medium text-center">${row[provKey] || '-'}</td>
                     <td class="px-4 py-2.5 text-slate-600 text-center">${row[picKey] || '-'}</td>
-                    <td class="px-4 py-2.5 text-center font-bold text-slate-800">${row[valKey] || '-'}</td>
+                    <td class="px-4 py-2.5 text-center font-bold text-emerald-600">${valAda}</td>
                 `;
                 fragment.appendChild(tr);
             });
