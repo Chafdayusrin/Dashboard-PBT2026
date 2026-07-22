@@ -439,17 +439,19 @@
             kendalaContainer: document.getElementById('kendala-container')
         };
 
-        document.addEventListener('DOMContentLoaded', () => {
+       document.addEventListener('DOMContentLoaded', () => {
             setupEventListeners();
             fetchData();
             fetchHistoryData();
             fetchKendalaData();
             
+            // Mengatur otomatis update data setiap 30 detik (30000 ms) atau 1 menit (60000 ms)
+            // Tanpa membuat halaman berkedip atau mereload seluruh browser secara kasar.
             setInterval(() => {
                 fetchData();
                 fetchHistoryData();
                 fetchKendalaData();
-            }, 300000);
+            }, 10000); // 10000 ms = 10 detik
         });
 
         function fetchData() {
