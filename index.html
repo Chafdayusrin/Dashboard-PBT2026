@@ -445,13 +445,12 @@
             fetchHistoryData();
             fetchKendalaData();
             
-            // Mengatur otomatis update data setiap 30 detik (30000 ms) atau 1 menit (60000 ms)
-            // Tanpa membuat halaman berkedip atau mereload seluruh browser secara kasar.
+            // Auto update secara senyap setiap 5 detik di latar belakang
             setInterval(() => {
                 fetchData();
                 fetchHistoryData();
                 fetchKendalaData();
-            }, 10000); // 10000 ms = 10 detik
+            }, 5000); // 5000 ms = 5 detik
         });
 
         function fetchData() {
