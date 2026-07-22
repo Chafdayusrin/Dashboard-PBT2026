@@ -164,7 +164,7 @@
             </li>
             <li class="relative leading-relaxed">
                 <a href="#kendala-section" class="text-sm font-medium block pl-2 text-decoration-none flex items-center gap-2">
-                    <i class="ph ph-warning text-rose-400 text-base"></i> Widget Kendala
+                    <i class="ph ph-warning text-rose-400 text-base"></i> Kendala
                 </a>
             </li>
             <li class="relative leading-relaxed">
