@@ -447,12 +447,7 @@
             fetchHistoryData();
             fetchKendalaData();
             
-            // Auto update senyap setiap 5 detik di latar belakang
-            setInterval(() => {
-                fetchData();
-                fetchHistoryData();
-                fetchKendalaData();
-            }, 5000);
+          
         });
 
         function manualRefreshData() {
