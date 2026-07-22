@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Ketersediaan Data Spasial PBT se-Indonesia</title>
+    
+    <!-- Include Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Include PapaParse via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- Include Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Include Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Load Roboto font -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            padding: 0;
+            margin: 0;
+            overflow-x: hidden;
+            font-size: .875rem;
+            font-family: 'Roboto', sans-serif;
+            background-color: #f0f2f5;
+            color: #334155;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: 600;
+            line-height: 1.2;
+            color: #1e293b;
+        }
+
+        p {
+            font-size: .875rem;
+            margin-bottom: .5rem;
+            line-height: 1.3rem;
+        }
+
+        h1 { font-size: 3.125rem; }
+        h2 { font-size: 2.2rem; }
+        @media(max-width: 767px) {
+            h2 { font-size: 1.7rem; }
+        }
+        h3 { font-size: 1.6rem; }
+        h4 { font-size: 1.35rem; }
+        h5 { font-size: 1rem; }
+        h6 { font-size: .9375rem; }
+
+        .card-body {
+            padding: 1.5rem 2rem;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+        .card-body:hover {
+            box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.08);
+        }
+        @media (max-width: 991px) {
+            .card-body {
+                padding: 1.25rem 1rem;
+            }
+        }
+
+        .grid-margin {
+            margin-bottom: 24px;
+        }
+
+        /* Loader */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #6366f1;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Sidebar Terpin / Freeze secara Permanen */
+        .left-sidebar {
+            width: 260px;
+            padding: 24px;
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+            color: #f8fafc;
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 50;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.08);
+        }
+        .left-sidebar h1, .left-sidebar h2, .left-sidebar h3, .left-sidebar h4, .left-sidebar h5, .left-sidebar h6, .left-sidebar p {
+            color: #f8fafc;
+        }
+        .left-sidebar .left-menu li a {
+            color: #94a3b8;
+            transition: all 0.2s ease;
+        }
+        .left-sidebar .left-menu li a:hover {
+            color: #38bdf8;
+            padding-left: 6px;
+        }
+        @media (max-width: 991px) {
+            .left-sidebar {
+                position: relative;
+                width: 100%;
+                height: auto;
+                padding: 16px;
+            }
+        }
+        @media (min-width: 1200px) {
+            .left-sidebar { width: 16.66666667%; }
+        }
+        @media (min-width: 768px) and (max-width: 1199px) {
+            .left-sidebar { width: 25%; }
+        }
+
+        /* Panel Utama dengan Margin Kiri agar tidak tertutup Sidebar */
+        .main-panel {
+            padding: 40px 40px;
+            margin-left: 0;
+        }
+        @media (max-width: 991px) {
+            .main-panel { padding: 30px 20px; }
+        }
+        @media (min-width: 1200px) {
+            .main-panel { margin-left: 16.66666667%; }
+        }
+        @media (min-width: 768px) and (max-width: 1199px) {
+            .main-panel { margin-left: 25%; }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Sidebar Modern Gelap di Sebelah Kiri -->
+    <aside class="left-sidebar">
+        <div class="logo-wrapper flex items-center gap-3.5 mb-6">
+            <div class="bg-white/10 backdrop-blur-md p-1.5 rounded-xl border border-white/10 shadow-sm w-11 h-11 flex items-center justify-center">
+                <img src="https://png.pngtree.com/png-vector/20221119/ourmid/pngtree-logo-attr-bpn-png-image_6461196.png" alt="Logo ATR/BPN" class="w-full h-full object-contain filter drop-shadow">
+            </div>
+            <div>
+                <h6 class="font-bold text-white leading-tight">Data Spasial PBT</h6>
+                <span class="text-xs text-sky-400 font-medium">ATR/BPN Indonesia</span>
+            </div>
+        </div>
+
+        <div class="left-menu-title font-bold text-[11px] uppercase tracking-wider text-slate-400 mb-3 mt-8">Navigasi Utama</div>
+        <ul class="left-menu space-y-2 list-none p-0">
+            <li class="relative leading-relaxed">
+                <a href="#" onclick="window.scrollTo({top:0, behavior:'smooth'})" class="text-sm font-medium block pl-2 text-decoration-none flex items-center gap-2">
+                    <i class="ph ph-house text-sky-400 text-base"></i> Ringkasan Dashboard
+                </a>
+            </li>
+            <li class="relative leading-relaxed">
+                <a href="#kendala-section" class="text-sm font-medium block pl-2 text-decoration-none flex items-center gap-2">
+                    <i class="ph ph-warning text-rose-400 text-base"></i> Widget Kendala
+                </a>
+            </li>
+            <li class="relative leading-relaxed">
+                <a href="#filter-section" class="text-sm font-medium block pl-2 text-decoration-none flex items-center gap-2">
+                    <i class="ph ph-faders text-emerald-400 text-base"></i> Filter & Data
+                </a>
+            </li>
+            <li class="relative leading-relaxed">
+                <a href="#history-section" class="text-sm font-medium block pl-2 text-decoration-none flex items-center gap-2">
+                    <i class="ph ph-clock-counter-clockwise text-amber-400 text-base"></i> Histori Keterisian
+                </a>
+            </li>
+        </ul>
+
+        <div class="mt-10 pt-4 border-t border-slate-700/60">
+            <span class="text-xs text-slate-400 block font-medium mb-1">Cakupan Wilayah</span>
+            <p class="text-xs font-bold text-slate-200 m-0 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Seluruh Indonesia
+            </p>
+        </div>
+    </aside>
+
+    <!-- Main Panel Kanan -->
+    <div class="main-panel">
+        
+        <!-- Header Title -->
+        <div class="grid-margin flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h2>Dashboard Spasial PBT</h2>
+                <p class="text-slate-500 mt-1">Monitoring real-time ketersediaan data spasial PBT se-Indonesia dengan analitik terpadu.</p>
+            </div>
+            <div class="flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl text-xs font-semibold border border-indigo-100 shadow-sm self-start md:self-auto">
+                <i class="ph ph-shield-check text-base"></i> Sistem Terverifikasi
+            </div>
+        </div>
+
+        <!-- Summary Widgets (5 Cards) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 grid-margin">
+            <!-- Widget 1: Total Provinsi -->
+            <div class="card-body flex items-center gap-3.5 border-l-4 border-indigo-500">
+                <div class="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-xl shadow-inner flex-shrink-0">
+                    <i class="ph ph-flag"></i>
+                </div>
+                <div>
+                    <p class="text-[11px] text-slate-400 uppercase font-bold tracking-wider m-0">Total Provinsi</p>
+                    <h3 id="widget-total-provinsi" class="font-bold mt-0.5 text-slate-800 m-0 text-xl">0</h3>
+                </div>
+            </div>
+
+            <!-- Widget 2: Jumlah Bidang -->
+            <div class="card-body flex items-center gap-3.5 border-l-4 border-sky-500">
+                <div class="w-12 h-12 rounded-2xl bg-sky-50 flex items-center justify-center text-sky-600 font-bold text-xl shadow-inner flex-shrink-0">
+                    <i class="ph ph-squares-four"></i>
+                </div>
+                <div>
+                    <p class="text-[11px] text-slate-400 uppercase font-bold tracking-wider m-0">Jumlah Bidang</p>
+                    <h3 id="widget-jumlah-bidang" class="font-bold mt-0.5 text-slate-800 m-0 text-xl">0</h3>
+                </div>
+            </div>
+
+            <!-- Widget 3: Total Ada -->
+            <div class="card-body flex items-center gap-3.5 border-l-4 border-emerald-500">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 font-bold text-xl shadow-inner flex-shrink-0">
+                    <i class="ph ph-check-circle"></i>
+                </div>
+                <div>
+                    <p class="text-[11px] text-slate-400 uppercase font-bold tracking-wider m-0">Total Ada</p>
+                    <h3 id="widget-total-ada" class="font-bold mt-0.5 text-emerald-600 m-0 text-xl">0</h3>
+                </div>
+            </div>
+
+            <!-- Widget 4: Total Tidak Ada -->
+            <div class="card-body flex items-center gap-3.5 border-l-4 border-rose-400">
+                <div class="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-500 font-bold text-xl shadow-inner flex-shrink-0">
+                    <i class="ph ph-x-circle"></i>
+                </div>
+                <div>
+                    <p class="text-[11px] text-slate-400 uppercase font-bold tracking-wider m-0">Total Tidak Ada</p>
+                    <h3 id="widget-total-tidak-ada" class="font-bold mt-0.5 text-rose-500 m-0 text-xl">0</h3>
+                </div>
+            </div>
+
+            <!-- Widget 5: Rata-rata Progres -->
+            <div class="card-body flex items-center justify-between gap-3 border-l-4 border-amber-500 sm:col-span-2 lg:col-span-1">
+                <div>
+                    <p class="text-[11px] text-slate-400 uppercase font-bold tracking-wider m-0">Rata-rata Progres</p>
+                    <h3 id="widget-rata-progres" class="font-bold mt-0.5 text-amber-600 m-0 text-xl">0%</h3>
+                </div>
+                <div class="w-12 h-12 relative bg-amber-50/50 p-1 rounded-xl flex-shrink-0">
+                    <canvas id="ratioChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- WIDGET KENDALA BARU (B2:C7 dari sheet "source kendala") -->
+        <div id="kendala-section" class="card-body grid-margin border-t-4 border-rose-500">
+            <h4 class="mb-4 font-semibold text-slate-800 flex items-center gap-2">
+                <i class="ph ph-warning-octagon text-rose-500 text-lg"></i> Ringkasan Kendala & Catatan Lapangan (Source Kendala)
+            </h4>
+            
+            <div id="kendala-loading" class="text-xs text-slate-400 italic py-4 text-center">Memuat data kendala...</div>
+            
+            <!-- Grid card untuk menampilkan baris B2:C7 -->
+            <div id="kendala-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <!-- Data akan dimasukkan lewat JS -->
+            </div>
+        </div>
+
+        <!-- Filter Panel -->
+        <div id="filter-section" class="card-body grid-margin border-t-4 border-amber-400">
+            <h4 class="mb-4 font-semibold text-slate-800 flex items-center gap-2">
+                <i class="ph ph-faders text-amber-500 text-lg"></i> Filter & Pengurutan Data
+            </h4>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="flex flex-col gap-1.5">
+                    <label for="filter-provinsi" class="text-xs font-bold text-slate-600 uppercase">Provinsi</label>
+                    <select id="filter-provinsi" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all">
+                        <option value="all">Semua Provinsi</option>
+                    </select>
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                    <label for="filter-pic" class="text-xs font-bold text-slate-600 uppercase">PIC</label>
+                    <select id="filter-pic" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all">
+                        <option value="all">Semua PIC</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="mt-5 flex flex-col sm:flex-row justify-between items-center border-t border-slate-100 pt-4 gap-3">
+                <div id="data-summary" class="text-xs text-slate-500 font-medium">
+                    Menunggu data...
+                </div>
+                <button id="reset-filters" class="text-xs text-rose-600 hover:text-rose-800 font-bold transition-all flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 px-4 py-2.5 rounded-xl border border-rose-100 shadow-sm">
+                    <i class="ph ph-arrow-counter-clockwise text-base"></i> Reset Filter & Urutan
+                </button>
+            </div>
+        </div>
+
+        <!-- Data Table Section -->
+        <div class="card-body grid-margin relative min-h-[400px] overflow-hidden">
+            
+            <!-- Loading State -->
+            <div id="loading-state" class="absolute inset-0 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center z-10">
+                <div class="loader mb-3"></div>
+                <p class="text-slate-600 text-xs font-medium">Mengambil data dari Google Sheets...</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="error-state" class="hidden absolute inset-0 bg-white flex flex-col items-center justify-center z-10 p-6 text-center">
+                <div class="w-14 h-14 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mb-3 mx-auto shadow-sm">
+                    <i class="ph ph-warning-circle text-2xl"></i>
+                </div>
+                <h5 class="font-bold mb-1 text-slate-800">Gagal Memuat Data</h5>
+                <p id="error-message" class="text-slate-500 text-xs max-w-md mb-4">Terjadi kesalahan saat mengambil data.</p>
+                <button onclick="fetchData()" class="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-xl hover:bg-indigo-700 shadow-sm">Coba Lagi</button>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden absolute inset-0 bg-white flex flex-col items-center justify-center z-10 p-6 text-center">
+                <div class="w-14 h-14 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mb-3 mx-auto">
+                    <i class="ph ph-magnifying-glass text-2xl"></i>
+                </div>
+                <h5 class="font-bold mb-1 text-slate-800">Data tidak ditemukan</h5>
+                <p class="text-slate-500 text-xs">Tidak ada data yang cocok dengan filter yang dipilih.</p>
+            </div>
+
+            <div class="overflow-x-auto w-full">
+                <table class="w-full border-collapse min-w-[800px]">
+                    <thead>
+                        <tr id="table-head-row" class="bg-gradient-to-r from-slate-900 to-indigo-950 text-amber-300 shadow-sm">
+                            <!-- Dynamic headers populated by JS -->
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="divide-y divide-slate-100 text-sm font-medium">
+                        <!-- Rows populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- History Table Section -->
+        <div id="history-section" class="card-body grid-margin relative min-h-[250px]">
+            <h4 class="mb-4 font-semibold text-slate-800 flex items-center gap-2">
+                <i class="ph ph-clock-counter-clockwise text-indigo-600 text-lg"></i> Histori Keterisian Tanggal Sebelumnya
+            </h4>
+            
+            <div id="history-loading-state" class="absolute inset-0 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center z-10">
+                <div class="loader mb-3"></div>
+                <p class="text-slate-600 text-xs font-medium">Memuat data histori...</p>
+            </div>
+
+            <div id="history-error-state" class="hidden absolute inset-0 bg-white flex flex-col items-center justify-center z-10 p-6 text-center">
+                <p class="text-slate-500 text-xs mb-3">Pastikan GID Sheet histori sudah diatur dengan benar.</p>
+                <button onclick="fetchHistoryData()" class="px-3 py-1.5 bg-slate-100 text-slate-700 text-xs rounded-xl font-medium">Coba Lagi</button>
+            </div>
+
+            <div class="overflow-x-auto w-full">
+                <table class="w-full border-collapse min-w-[800px]">
+                    <thead>
+                        <tr class="bg-gradient-to-r from-slate-900 to-indigo-950 text-amber-300">
+                            <th class="px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-center w-16">No</th>
+                            <th class="px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-center">Tanggal</th>
+                            <th class="px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-center">Provinsi</th>
+                            <th class="px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-center">PIC</th>
+                            <th class="px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-center w-48">Nilai</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table-body" class="divide-y divide-slate-100 text-sm font-medium">
+                        <!-- History rows populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Credits / Footer -->
+        <div class="credits mt-8 pt-6 border-t border-slate-200 text-center">
+            <ul class="flex flex-wrap justify-center gap-6 text-xs text-slate-400 font-medium list-none p-0">
+                <li><p class="m-0">&copy; Kementerian Agraria dan Tata Ruang / Badan Pertanahan Nasional</p></li>
+                <li><p class="m-0">&bull; Data Spasial PBT Terintegrasi Real-time</p></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Script Aplikasi Fungsional -->
+    <script>
+        const SHEET_ID = '10xlaTs0-1Zix4deVV3Oik5ShOymULyuCn8lTbHc6ItA';
+        const GID = '808300545';
+        const HISTORY_GID = 'GANTI_DENGAN_GID_HISTORI_ANDA'; 
+        
+        // URL untuk Sheet Utama
+        const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
+        const HISTORY_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${HISTORY_GID}`;
+        
+        // URL untuk Sheet "source kendala" dengan range B2:C7 (menggunakan range=B2%3AC7)
+        const KENDALA_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=source+kendala&range=B2:C7`;
+
+        let rawData = [];
+        let filteredData = [];
+        let headers = [];
+        let historyData = [];
+        let kendalaData = [];
+        
+        let currentSortColumn = null;
+        let currentSortDirection = 'asc';
+        let ratioChartInstance = null;
+        
+        const ui = {
+            loadingState: document.getElementById('loading-state'),
+            errorState: document.getElementById('error-state'),
+            errorMessage: document.getElementById('error-message'),
+            emptyState: document.getElementById('empty-state'),
+            tableBody: document.getElementById('table-body'),
+            tableHeadRow: document.getElementById('table-head-row'),
+            filterProvinsi: document.getElementById('filter-provinsi'),
+            filterPic: document.getElementById('filter-pic'),
+            resetFiltersBtn: document.getElementById('reset-filters'),
+            dataSummary: document.getElementById('data-summary'),
+            
+            widgetTotalProvinsi: document.getElementById('widget-total-provinsi'),
+            widgetJumlahBidang: document.getElementById('widget-jumlah-bidang'),
+            widgetTotalAda: document.getElementById('widget-total-ada'),
+            widgetTotalTidakAda: document.getElementById('widget-total-tidak-ada'),
+            widgetRataProgres: document.getElementById('widget-rata-progres'),
+            
+            historyLoadingState: document.getElementById('history-loading-state'),
+            historyErrorState: document.getElementById('history-error-state'),
+            historyTableBody: document.getElementById('history-table-body'),
+            
+            kendalaLoading: document.getElementById('kendala-loading'),
+            kendalaContainer: document.getElementById('kendala-container')
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupEventListeners();
+            fetchData();
+            fetchHistoryData();
+            fetchKendalaData();
+            
+            setInterval(() => {
+                fetchData();
+                fetchHistoryData();
+                fetchKendalaData();
+            }, 300000);
+        });
+
+        function fetchData() {
+            showLoading(true);
+            showError(false);
+            
+            Papa.parse(CSV_URL, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    if (results.errors.length > 0 && results.data.length === 0) {
+                        handleFetchError("Gagal mem-parsing data CSV. Pastikan link Google Sheet dapat diakses publik.");
+                        return;
+                    }
+
+                    rawData = results.data.map((row, index) => {
+                        row._originalIndex = index;
+                        return row;
+                    });
+                    
+                    headers = results.meta.fields;
+
+                    buildTableHeaders();
+                    populateFilters();
+                    applyFiltersAndSort();
+                    showLoading(false);
+                },
+                error: function(error) {
+                    handleFetchError("Terjadi kesalahan saat memuat data. Periksa koneksi internet.");
+                }
+            });
+        }
+
+        // Mengambil data Widget Kendala dari sheet "source kendala" range B2:C7
+        function fetchKendalaData() {
+            ui.kendalaLoading.style.display = 'block';
+            ui.kendalaContainer.innerHTML = '';
+
+            Papa.parse(KENDALA_CSV_URL, {
+                download: true,
+                header: false, // Karena range B2:C7 tidak punya header teks kolom baris pertama
+                skipEmptyLines: true,
+                complete: function(results) {
+                    ui.kendalaLoading.style.display = 'none';
+                    if (results.data && results.data.length > 0) {
+                        kendalaData = results.data;
+                        renderKendalaWidgets();
+                    } else {
+                        ui.kendalaContainer.innerHTML = `<div class="text-xs text-slate-400 italic col-span-full text-center">Tidak ada data kendala ditemukan pada range B2:C7.</div>`;
+                    }
+                },
+                error: function(err) {
+                    ui.kendalaLoading.style.display = 'none';
+                    ui.kendalaContainer.innerHTML = `<div class="text-xs text-rose-500 italic col-span-full text-center">Gagal memuat sheet "source kendala". Pastikan nama sheet sesuai.</div>`;
+                    console.error(err);
+                }
+            });
+        }
+
+        function renderKendalaWidgets() {
+            ui.kendalaContainer.innerHTML = '';
+            const fragment = document.createDocumentFragment();
+
+            kendalaData.forEach((row, index) => {
+                let label = row[0] ? row[0].trim() : `Kategori ${index + 1}`;
+                let value = row[1] !== undefined ? row[1].trim() : '0';
+
+                const card = document.createElement('div');
+                card.className = "bg-rose-50/60 border border-rose-100 rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-sm";
+                card.innerHTML = `
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0 font-bold text-base">
+                            <i class="ph ph-warning"></i>
+                        </div>
+                        <div class="truncate">
+                            <p class="text-xs text-slate-600 font-semibold truncate m-0" title="${label}">${label}</p>
+                            <span class="text-[10px] text-slate-400 font-medium">Kendala Lapangan</span>
+                        </div>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                        <span class="text-lg font-extrabold text-rose-700 bg-white px-2.5 py-1 rounded-lg border border-rose-200/60 shadow-xs">${value}</span>
+                    </div>
+                `;
+                fragment.appendChild(card);
+            });
+
+            ui.kendalaContainer.appendChild(fragment);
+        }
+
+        // Header Tabel Utama dengan Teks Rata Tengah (Center)
+        function buildTableHeaders() {
+            let html = `<th class="px-4 py-3.5 text-xs font-bold uppercase tracking-wider border-b border-indigo-900/40 w-16 text-center text-amber-300 bg-gradient-to-r from-slate-900 to-indigo-950">No</th>`;
+            
+            const targetCol = getTargetColumn(headers);
+
+            headers.forEach(header => {
+                let extraClasses = "";
+                if (header === targetCol) {
+                    extraClasses = "w-48";
+                }
+
+                let iconClass = "ph-caret-up-down text-amber-300/60 group-hover:text-amber-300";
+                if (currentSortColumn === header) {
+                    iconClass = currentSortDirection === 'asc' ? "ph-caret-up text-amber-300 font-bold" : "ph-caret-down text-amber-300 font-bold";
+                }
+                
+                html += `
+                    <th onclick="handleColumnSort('${header}')" class="px-4 py-3.5 text-xs font-bold uppercase tracking-wider border-b border-indigo-900/40 text-amber-300 bg-gradient-to-r from-slate-900 to-indigo-950 text-center ${extraClasses} cursor-pointer hover:bg-slate-800 transition-colors select-none">
+                        <div class="flex items-center justify-center gap-1.5 w-full">
+                            <span>${header}</span>
+                            <i class="ph ${iconClass} text-sm"></i>
+                        </div>
+                    </th>
+                `;
+            });
+
+            ui.tableHeadRow.innerHTML = html;
+        }
+
+        function handleColumnSort(columnName) {
+            if (currentSortColumn === columnName) {
+                if (currentSortDirection === 'asc') {
+                    currentSortDirection = 'desc';
+                } else {
+                    currentSortColumn = null;
+                    currentSortDirection = 'asc';
+                }
+            } else {
+                currentSortColumn = columnName;
+                currentSortDirection = 'asc';
+            }
+
+            buildTableHeaders();
+            applyFiltersAndSort();
+        }
+
+        function findColumn(headersArray, keywords) {
+            return headersArray.find(h => 
+                keywords.some(k => h.toLowerCase().includes(k))
+            ) || null;
+        }
+
+        function getTargetColumn(headersArray) {
+            if (!headersArray || headersArray.length === 0) return null;
+            let found = findColumn(headersArray, ['progres', 'persentase', 'progress', '%', 'ada', 'jumlah', 'status', 'ketersediaan']);
+            if (found) return found;
+            if (headersArray.length >= 3) return headersArray[2];
+            return headersArray[headersArray.length - 1];
+        }
+
+        function populateFilters() {
+            const provCol = findColumn(headers, ['provinsi', 'prov']);
+            const picCol = findColumn(headers, ['pic', 'penanggung jawab']);
+
+            if (provCol) populateSelect(ui.filterProvinsi, getUniqueValues(rawData, provCol));
+            if (picCol) populateSelect(ui.filterPic, getUniqueValues(rawData, picCol));
+        }
+
+        function getUniqueValues(data, key) {
+            const unique = [...new Set(data.map(item => item[key]).filter(val => val && val.trim() !== ''))];
+            return unique.sort();
+        }
+
+        function populateSelect(selectElement, values) {
+            const defaultOption = selectElement.options[0];
+            selectElement.innerHTML = '';
+            selectElement.appendChild(defaultOption);
+            
+            values.forEach(val => {
+                const option = document.createElement('option');
+                option.value = val;
+                option.textContent = val;
+                selectElement.appendChild(option);
+            });
+        }
+
+        function setupEventListeners() {
+            ui.filterProvinsi.addEventListener('change', applyFiltersAndSort);
+            ui.filterPic.addEventListener('change', applyFiltersAndSort);
+            
+            ui.resetFiltersBtn.addEventListener('click', () => {
+                ui.filterProvinsi.value = 'all';
+                ui.filterPic.value = 'all';
+                currentSortColumn = null;
+                currentSortDirection = 'asc';
+                buildTableHeaders();
+                applyFiltersAndSort();
+            });
+        }
+
+        function applyFiltersAndSort() {
+            const provFilter = ui.filterProvinsi.value;
+            const picFilter = ui.filterPic.value;
+
+            const provCol = findColumn(headers, ['provinsi', 'prov']);
+            const picCol = findColumn(headers, ['pic', 'penanggung jawab']);
+
+            filteredData = rawData.filter(row => {
+                let provMatch = provFilter === 'all' || (provCol && row[provCol] === provFilter);
+                let picMatch = picFilter === 'all' || (picCol && row[picCol] === picFilter);
+                return provMatch && picMatch;
+            });
+
+            if (currentSortColumn) {
+                filteredData.sort((a, b) => {
+                    let valA = a[currentSortColumn];
+                    let valB = b[currentSortColumn];
+
+                    let numA = parseNumeric(valA);
+                    let numB = parseNumeric(valB);
+
+                    let isNumericCol = !isNaN(parseFloat(valA)) && !isNaN(parseFloat(valB)) && (valA.toString().trim() !== '' && valB.toString().trim() !== '');
+
+                    if (isNumericCol) {
+                        return currentSortDirection === 'asc' ? numA - numB : numB - numA;
+                    } else {
+                        let strA = (valA || '').toString().toLowerCase();
+                        let strB = (valB || '').toString().toLowerCase();
+                        if (strA < strB) return currentSortDirection === 'asc' ? -1 : 1;
+                        if (strA > strB) return currentSortDirection === 'asc' ? 1 : -1;
+                        return 0;
+                    }
+                });
+            } else {
+                filteredData.sort((a, b) => a._originalIndex - b._originalIndex);
+            }
+
+            renderTable();
+            updateSummary();
+            updateWidgets(); 
+        }
+
+        function parseNumeric(str) {
+            if (!str) return 0;
+            let s = str.toString().trim().replace('%', '');
+            if (s.includes(',') && s.includes('.')) {
+                s = s.replace(/\./g, '').replace(',', '.');
+            } else if (s.includes(',')) {
+                s = s.replace(',', '.');
+            }
+            let num = parseFloat(s);
+            return isNaN(num) ? 0 : num;
+        }
+
+        function renderTable() {
+            ui.tableBody.innerHTML = '';
+
+            if (filteredData.length === 0) {
+                ui.emptyState.classList.remove('hidden');
+                return;
+            } else {
+                ui.emptyState.classList.add('hidden');
+            }
+
+            const progressCol = findColumn(headers, ['progres', 'persentase', 'progress', '%']);
+            const targetCol = getTargetColumn(headers);
+            const fragment = document.createDocumentFragment();
+
+            filteredData.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors";
+                
+                let html = `<td class="px-4 py-2.5 text-center text-slate-400 font-medium">${index + 1}</td>`;
+                
+                headers.forEach(header => {
+                    let cellData = row[header];
+                    let cellClass = "px-4 py-2.5 text-slate-700 text-left";
+                    let content = cellData;
+
+                    if (header === progressCol) {
+                        let rawVal = cellData !== undefined && cellData !== null ? cellData.toString().trim() : '0';
+                        let numericVal = parseNumeric(rawVal);
+                        let percentage = Math.min(Math.max(numericVal, 0), 100);
+
+                        content = `
+                            <div class="flex flex-col items-center gap-1 w-full max-w-[140px] mx-auto">
+                                <div class="flex justify-between w-full text-[11px] font-bold text-slate-700">
+                                    <span>${rawVal}%</span>
+                                </div>
+                                <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden shadow-inner">
+                                    <div class="bg-gradient-to-r from-indigo-500 to-emerald-500 h-1.5 rounded-full transition-all duration-500" style="width: ${percentage}%"></div>
+                                </div>
+                            </div>
+                        `;
+                        cellClass = "px-4 py-2.5 text-slate-700 text-center";
+                    } else if (header === targetCol) {
+                        let rawVal = cellData !== undefined && cellData !== null ? cellData.toString().trim() : '-';
+                        content = `<span class="font-bold text-indigo-600 bg-indigo-50 py-0.5 px-2.5 rounded-lg inline-block text-xs">${rawVal}</span>`;
+                        cellClass = "px-4 py-2.5 text-slate-700 text-center";
+                    } else if (!cellData) {
+                        content = `<span class="text-slate-300 italic">-</span>`;
+                    }
+
+                    html += `<td class="${cellClass}">${content}</td>`;
+                });
+
+                tr.innerHTML = html;
+                fragment.appendChild(tr);
+            });
+
+            ui.tableBody.appendChild(fragment);
+        }
+
+        function updateSummary() {
+            const total = rawData.length;
+            const filtered = filteredData.length;
+            if (total === 0) {
+                ui.dataSummary.innerHTML = `Menunggu data...`;
+            } else if (total === filtered) {
+                ui.dataSummary.innerHTML = `Menampilkan semua <strong>${total}</strong> data`;
+            } else {
+                ui.dataSummary.innerHTML = `Menampilkan <strong>${filtered}</strong> dari ${total} data`;
+            }
+        }
+
+        function updateWidgets() {
+            if (!headers || headers.length === 0) return;
+
+            const provCol = findColumn(headers, ['provinsi', 'prov']);
+            const bidangCol = findColumn(headers, ['jumlah bidang', 'bidang', 'total bidang']);
+            const progresCol = findColumn(headers, ['progres', 'persentase', 'progress', '%']);
+            
+            const adaCol = findColumn(headers, ['ada']);
+            const tidakAdaCol = findColumn(headers, ['tidak ada', 'tidakad']);
+
+            let uniqueProvincesCount = 0;
+            let totalBidang = 0;
+            let totalProgres = 0;
+            let sumAda = 0;
+            let sumTidakAda = 0;
+
+            if (filteredData.length > 0) {
+                if (provCol) {
+                    const uniqueProvinces = new Set();
+                    filteredData.forEach(row => {
+                        if (row[provCol]) uniqueProvinces.add(row[provCol].trim().toLowerCase());
+                    });
+                    uniqueProvincesCount = uniqueProvinces.size;
+                } else {
+                    uniqueProvincesCount = filteredData.length;
+                }
+
+                filteredData.forEach(row => {
+                    if (bidangCol) totalBidang += parseNumeric(row[bidangCol]);
+                    if (progresCol) totalProgres += parseNumeric(row[progresCol]);
+                    if (adaCol) sumAda += parseNumeric(row[adaCol]);
+                    if (tidakAdaCol) sumTidakAda += parseNumeric(row[tidakAdaCol]);
+                });
+            }
+
+            ui.widgetTotalProvinsi.textContent = uniqueProvincesCount;
+            ui.widgetJumlahBidang.textContent = totalBidang.toLocaleString('id-ID');
+            ui.widgetTotalAda.textContent = sumAda.toLocaleString('id-ID');
+            ui.widgetTotalTidakAda.textContent = sumTidakAda.toLocaleString('id-ID');
+            
+            let avgProgres = filteredData.length > 0 ? (totalProgres / filteredData.length) : 0;
+            ui.widgetRataProgres.textContent = avgProgres.toFixed(2) + "%";
+
+            updateRatioChart(sumAda, sumTidakAda);
+        }
+
+        function updateRatioChart(totalAda, totalTidakAda) {
+            const ctx = document.getElementById('ratioChart').getContext('2d');
+            
+            if (ratioChartInstance) {
+                ratioChartInstance.data.datasets[0].data = [totalAda, totalTidakAda];
+                ratioChartInstance.update();
+                return;
+            }
+
+            ratioChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Ada', 'Tidak Ada'],
+                    datasets: [{
+                        data: [totalAda, totalTidakAda],
+                        backgroundColor: ['#10b981', '#cbd5e1'],
+                        hoverBackgroundColor: ['#059669', '#94a3b8'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        function showLoading(show) {
+            if (show) {
+                ui.loadingState.classList.remove('hidden');
+                ui.tableBody.innerHTML = '';
+            } else {
+                ui.loadingState.classList.add('hidden');
+            }
+        }
+
+        function showError(show, message = "") {
+            if (show) {
+                ui.errorState.classList.remove('hidden');
+                ui.errorMessage.textContent = message;
+                ui.loadingState.classList.add('hidden');
+                ui.emptyState.classList.add('hidden');
+            } else {
+                ui.errorState.classList.add('hidden');
+            }
+        }
+
+        function handleFetchError(message) {
+            showLoading(false);
+            showError(true, message);
+        }
+
+        function fetchHistoryData() {
+            ui.historyLoadingState.classList.remove('hidden');
+            ui.historyErrorState.classList.add('hidden');
+            ui.historyTableBody.innerHTML = '';
+            
+            const targetDate = new Date();
+            targetDate.setDate(targetDate.getDate() - 1);
+            const formattedYesterday = targetDate.toISOString().split('T')[0];
+            
+            if (HISTORY_GID === 'GANTI_DENGAN_GID_HISTORI_ANDA') {
+                setTimeout(() => {
+                    historyData = [];
+                    const provCol = findColumn(headers, ['provinsi', 'prov']);
+                    const picCol = findColumn(headers, ['pic', 'penanggung jawab']);
+                    const targetCol = getTargetColumn(headers);
+                    
+                    if (rawData && rawData.length > 0) {
+                        const sampleData = rawData.slice(0, 5);
+                        
+                        historyData = sampleData.map(row => ({
+                            tanggal: formattedYesterday,
+                            provinsi: provCol ? row[provCol] : '-',
+                            pic: picCol ? row[picCol] : '-',
+                            nilai: targetCol ? row[targetCol] : '0'
+                        }));
+                    } else {
+                        historyData = [
+                            { tanggal: formattedYesterday, provinsi: 'Jawa Barat', pic: 'Fikri', nilai: '800' }
+                        ];
+                    }
+                    
+                    renderHistoryTable();
+                    ui.historyLoadingState.classList.add('hidden');
+                }, 1000);
+                return;
+            }
+
+            Papa.parse(HISTORY_CSV_URL, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    if (results.data && results.data.length > 0) {
+                        historyData = results.data.filter(row => {
+                            const dateKey = Object.keys(row).find(k => k.toLowerCase().includes('tanggal') || k.toLowerCase().includes('date')) || 'tanggal';
+                            const rowDate = row[dateKey] ? row[dateKey].trim() : '';
+                            return rowDate === formattedYesterday;
+                        });
+                    } else {
+                        historyData = [];
+                    }
+                    renderHistoryTable();
+                    ui.historyLoadingState.classList.add('hidden');
+                },
+                error: function(error) {
+                    ui.historyLoadingState.classList.add('hidden');
+                    ui.historyErrorState.classList.add('hidden');
+                }
+            });
+        }
+
+        function renderHistoryTable() {
+            ui.historyTableBody.innerHTML = '';
+            
+            if (historyData.length === 0) {
+                ui.historyTableBody.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400 italic">Tidak ada data histori untuk tanggal kemarin.</td></tr>`;
+                return;
+            }
+
+            const fragment = document.createDocumentFragment();
+
+            historyData.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors";
+                
+                const dateKey = Object.keys(row).find(k => k.toLowerCase().includes('tanggal') || k.toLowerCase().includes('date')) || 'tanggal';
+                const provKey = Object.keys(row).find(k => k.toLowerCase().includes('prov')) || 'provinsi';
+                const picKey = Object.keys(row).find(k => k.toLowerCase().includes('pic' ) || k.toLowerCase().includes('jawab')) || 'pic';
+                const valKey = Object.keys(row).find(k => k.toLowerCase().includes('progres') || k.toLowerCase().includes('persentase') || k.toLowerCase().includes('%') || k.toLowerCase().includes('nilai')) || Object.keys(row)[2] || 'nilai';
+
+                tr.innerHTML = `
+                    <td class="px-4 py-2.5 text-center text-slate-400 font-medium">${index + 1}</td>
+                    <td class="px-4 py-2.5 text-slate-700 text-center">${row[dateKey] || '-'}</td>
+                    <td class="px-4 py-2.5 text-slate-800 font-medium text-center">${row[provKey] || '-'}</td>
+                    <td class="px-4 py-2.5 text-slate-600 text-center">${row[picKey] || '-'}</td>
+                    <td class="px-4 py-2.5 text-center font-bold text-slate-800">${row[valKey] || '-'}</td>
+                `;
+                fragment.appendChild(tr);
+            });
+
+            ui.historyTableBody.appendChild(fragment);
+        }
+    </script>
+</body>
+</html>
