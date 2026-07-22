@@ -259,7 +259,7 @@
             </div>
         </div>
 
-        <!-- WIDGET KENDALA BARU (B2:C7 dari sheet "source kendala") -->
+        <!-- WIDGET KENDALA (B2:C7 dari sheet "source kendala") -->
         <div id="kendala-section" class="card-body grid-margin border-t-4 border-rose-500">
             <h4 class="mb-4 font-semibold text-slate-800 flex items-center gap-2">
                 <i class="ph ph-warning-octagon text-rose-500 text-lg"></i> Ringkasan Kendala & Catatan Lapangan (Source Kendala)
@@ -267,17 +267,22 @@
             
             <div id="kendala-loading" class="text-xs text-slate-400 italic py-4 text-center">Memuat data kendala...</div>
             
-            <!-- Grid card untuk menampilkan baris B2:C7 -->
             <div id="kendala-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                <!-- Data akan dimasukkan lewat JS -->
+                <!-- Data dimasukkan lewat JS -->
             </div>
         </div>
 
         <!-- Filter Panel -->
         <div id="filter-section" class="card-body grid-margin border-t-4 border-amber-400">
-            <h4 class="mb-4 font-semibold text-slate-800 flex items-center gap-2">
-                <i class="ph ph-faders text-amber-500 text-lg"></i> Filter & Pengurutan Data
-            </h4>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <h4 class="font-semibold text-slate-800 flex items-center gap-2 m-0">
+                    <i class="ph ph-faders text-amber-500 text-lg"></i> Filter & Pengurutan Data
+                </h4>
+                <!-- Tombol Refresh Manual -->
+                <button onclick="manualRefreshData()" id="btn-refresh" class="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold px-3.5 py-2 rounded-xl border border-indigo-100 transition-all shadow-sm self-start sm:self-auto cursor-pointer">
+                    <i id="refresh-icon" class="ph ph-arrows-clockwise text-sm"></i> Muat Ulang Data
+                </button>
+            </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div class="flex flex-col gap-1.5">
@@ -299,7 +304,7 @@
                 <div id="data-summary" class="text-xs text-slate-500 font-medium">
                     Menunggu data...
                 </div>
-                <button id="reset-filters" class="text-xs text-rose-600 hover:text-rose-800 font-bold transition-all flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 px-4 py-2.5 rounded-xl border border-rose-100 shadow-sm">
+                <button id="reset-filters" class="text-xs text-rose-600 hover:text-rose-800 font-bold transition-all flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 px-4 py-2.5 rounded-xl border border-rose-100 shadow-sm cursor-pointer">
                     <i class="ph ph-arrow-counter-clockwise text-base"></i> Reset Filter & Urutan
                 </button>
             </div>
@@ -337,11 +342,11 @@
                 <table class="w-full border-collapse min-w-[800px]">
                     <thead>
                         <tr id="table-head-row" class="bg-gradient-to-r from-slate-900 to-indigo-950 text-amber-300 shadow-sm">
-                            <!-- Dynamic headers populated by JS -->
+                            <!-- Dynamic headers -->
                         </tr>
                     </thead>
                     <tbody id="table-body" class="divide-y divide-slate-100 text-sm font-medium">
-                        <!-- Rows populated by JS -->
+                        <!-- Rows -->
                     </tbody>
                 </table>
             </div>
@@ -375,7 +380,7 @@
                         </tr>
                     </thead>
                     <tbody id="history-table-body" class="divide-y divide-slate-100 text-sm font-medium">
-                        <!-- History rows populated by JS -->
+                        <!-- History rows -->
                     </tbody>
                 </table>
             </div>
@@ -396,11 +401,8 @@
         const GID = '808300545';
         const HISTORY_GID = 'GANTI_DENGAN_GID_HISTORI_ANDA'; 
         
-        // URL untuk Sheet Utama
         const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
         const HISTORY_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${HISTORY_GID}`;
-        
-        // URL untuk Sheet "source kendala" dengan range B2:C7 (menggunakan range=B2%3AC7)
         const KENDALA_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=source+kendala&range=B2:C7`;
 
         let rawData = [];
@@ -439,75 +441,103 @@
             kendalaContainer: document.getElementById('kendala-container')
         };
 
-       document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', () => {
             setupEventListeners();
             fetchData();
             fetchHistoryData();
             fetchKendalaData();
             
-            // Auto update secara senyap setiap 5 detik di latar belakang
+            // Auto update senyap setiap 5 detik di latar belakang
             setInterval(() => {
                 fetchData();
                 fetchHistoryData();
                 fetchKendalaData();
-            }, 5000); // 5000 ms = 5 detik
+            }, 5000);
         });
+
+        function manualRefreshData() {
+            const icon = document.getElementById('refresh-icon');
+            const btn = document.getElementById('btn-refresh');
+            
+            icon.classList.add('animate-spin');
+            btn.disabled = true;
+            btn.classList.add('opacity-70', 'cursor-not-allowed');
+
+            Promise.all([
+                fetchData(),
+                fetchHistoryData(),
+                fetchKendalaData()
+            ]).finally(() => {
+                setTimeout(() => {
+                    icon.classList.remove('animate-spin');
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-70', 'cursor-not-allowed');
+                }, 600);
+            });
+        }
 
         function fetchData() {
             showLoading(true);
             showError(false);
             
-            Papa.parse(CSV_URL, {
-                download: true,
-                header: true,
-                skipEmptyLines: true,
-                complete: function(results) {
-                    if (results.errors.length > 0 && results.data.length === 0) {
-                        handleFetchError("Gagal mem-parsing data CSV. Pastikan link Google Sheet dapat diakses publik.");
-                        return;
+            return new Promise((resolve) => {
+                Papa.parse(CSV_URL, {
+                    download: true,
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        if (results.errors.length > 0 && results.data.length === 0) {
+                            handleFetchError("Gagal mem-parsing data CSV. Pastikan link Google Sheet dapat diakses publik.");
+                            resolve();
+                            return;
+                        }
+
+                        rawData = results.data.map((row, index) => {
+                            row._originalIndex = index;
+                            return row;
+                        });
+                        
+                        headers = results.meta.fields;
+
+                        buildTableHeaders();
+                        populateFilters();
+                        applyFiltersAndSort();
+                        showLoading(false);
+                        resolve();
+                    },
+                    error: function(error) {
+                        handleFetchError("Terjadi kesalahan saat memuat data. Periksa koneksi internet.");
+                        resolve();
                     }
-
-                    rawData = results.data.map((row, index) => {
-                        row._originalIndex = index;
-                        return row;
-                    });
-                    
-                    headers = results.meta.fields;
-
-                    buildTableHeaders();
-                    populateFilters();
-                    applyFiltersAndSort();
-                    showLoading(false);
-                },
-                error: function(error) {
-                    handleFetchError("Terjadi kesalahan saat memuat data. Periksa koneksi internet.");
-                }
+                });
             });
         }
 
-        // Mengambil data Widget Kendala dari sheet "source kendala" range B2:C7
         function fetchKendalaData() {
             ui.kendalaLoading.style.display = 'block';
             ui.kendalaContainer.innerHTML = '';
 
-            Papa.parse(KENDALA_CSV_URL, {
-                download: true,
-                header: false, // Karena range B2:C7 tidak punya header teks kolom baris pertama
-                skipEmptyLines: true,
-                complete: function(results) {
-                    ui.kendalaLoading.style.display = 'none';
-                    if (results.data && results.data.length > 0) {
-                        kendalaData = results.data;
-                        renderKendalaWidgets();
-                    } else {
-                        ui.kendalaContainer.innerHTML = `<div class="text-xs text-slate-400 italic col-span-full text-center">Tidak ada data kendala ditemukan pada range B2:C7.</div>`;
+            return new Promise((resolve) => {
+                Papa.parse(KENDALA_CSV_URL, {
+                    download: true,
+                    header: false,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        ui.kendalaLoading.style.display = 'none';
+                        if (results.data && results.data.length > 0) {
+                            kendalaData = results.data;
+                            renderKendalaWidgets();
+                        } else {
+                            ui.kendalaContainer.innerHTML = `<div class="text-xs text-slate-400 italic col-span-full text-center">Tidak ada data kendala ditemukan pada range B2:C7.</div>`;
+                        }
+                        resolve();
+                    },
+                    error: function(err) {
+                        ui.kendalaLoading.style.display = 'none';
+                        ui.kendalaContainer.innerHTML = `<div class="text-xs text-rose-500 italic col-span-full text-center">Gagal memuat sheet "source kendala". Pastikan nama sheet sesuai.</div>`;
+                        resolve();
                     }
-                },
-                error: function(err) {
-                    ui.kendalaLoading.style.display = 'none';
-                    ui.kendalaContainer.innerHTML = `<div class="text-xs text-rose-500 italic col-span-full text-center">Gagal memuat sheet "source kendala". Pastikan nama sheet sesuai.</div>`;
-                    console.error(err);
-                }
+                });
             });
         }
 
@@ -541,7 +571,6 @@
             ui.kendalaContainer.appendChild(fragment);
         }
 
-        // Header Tabel Utama dengan Teks Rata Tengah (Center)
         function buildTableHeaders() {
             let html = `<th class="px-4 py-3.5 text-xs font-bold uppercase tracking-wider border-b border-indigo-900/40 w-16 text-center text-amber-300 bg-gradient-to-r from-slate-900 to-indigo-950">No</th>`;
             
@@ -879,55 +908,60 @@
             targetDate.setDate(targetDate.getDate() - 1);
             const formattedYesterday = targetDate.toISOString().split('T')[0];
             
-            if (HISTORY_GID === 'GANTI_DENGAN_GID_HISTORI_ANDA') {
-                setTimeout(() => {
-                    historyData = [];
-                    const provCol = findColumn(headers, ['provinsi', 'prov']);
-                    const picCol = findColumn(headers, ['pic', 'penanggung jawab']);
-                    const targetCol = getTargetColumn(headers);
-                    
-                    if (rawData && rawData.length > 0) {
-                        const sampleData = rawData.slice(0, 5);
-                        
-                        historyData = sampleData.map(row => ({
-                            tanggal: formattedYesterday,
-                            provinsi: provCol ? row[provCol] : '-',
-                            pic: picCol ? row[picCol] : '-',
-                            nilai: targetCol ? row[targetCol] : '0'
-                        }));
-                    } else {
-                        historyData = [
-                            { tanggal: formattedYesterday, provinsi: 'Jawa Barat', pic: 'Fikri', nilai: '800' }
-                        ];
-                    }
-                    
-                    renderHistoryTable();
-                    ui.historyLoadingState.classList.add('hidden');
-                }, 1000);
-                return;
-            }
-
-            Papa.parse(HISTORY_CSV_URL, {
-                download: true,
-                header: true,
-                skipEmptyLines: true,
-                complete: function(results) {
-                    if (results.data && results.data.length > 0) {
-                        historyData = results.data.filter(row => {
-                            const dateKey = Object.keys(row).find(k => k.toLowerCase().includes('tanggal') || k.toLowerCase().includes('date')) || 'tanggal';
-                            const rowDate = row[dateKey] ? row[dateKey].trim() : '';
-                            return rowDate === formattedYesterday;
-                        });
-                    } else {
+            return new Promise((resolve) => {
+                if (HISTORY_GID === 'GANTI_DENGAN_GID_HISTORI_ANDA') {
+                    setTimeout(() => {
                         historyData = [];
-                    }
-                    renderHistoryTable();
-                    ui.historyLoadingState.classList.add('hidden');
-                },
-                error: function(error) {
-                    ui.historyLoadingState.classList.add('hidden');
-                    ui.historyErrorState.classList.add('hidden');
+                        const provCol = findColumn(headers, ['provinsi', 'prov']);
+                        const picCol = findColumn(headers, ['pic', 'penanggung jawab']);
+                        const targetCol = getTargetColumn(headers);
+                        
+                        if (rawData && rawData.length > 0) {
+                            const sampleData = rawData.slice(0, 5);
+                            
+                            historyData = sampleData.map(row => ({
+                                tanggal: formattedYesterday,
+                                provinsi: provCol ? row[provCol] : '-',
+                                pic: picCol ? row[picCol] : '-',
+                                nilai: targetCol ? row[targetCol] : '0'
+                            }));
+                        } else {
+                            historyData = [
+                                { tanggal: formattedYesterday, provinsi: 'Jawa Barat', pic: 'Fikri', nilai: '800' }
+                            ];
+                        }
+                        
+                        renderHistoryTable();
+                        ui.historyLoadingState.classList.add('hidden');
+                        resolve();
+                    }, 800);
+                    return;
                 }
+
+                Papa.parse(HISTORY_CSV_URL, {
+                    download: true,
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        if (results.data && results.data.length > 0) {
+                            historyData = results.data.filter(row => {
+                                const dateKey = Object.keys(row).find(k => k.toLowerCase().includes('tanggal') || k.toLowerCase().includes('date')) || 'tanggal';
+                                const rowDate = row[dateKey] ? row[dateKey].trim() : '';
+                                return rowDate === formattedYesterday;
+                            });
+                        } else {
+                            historyData = [];
+                        }
+                        renderHistoryTable();
+                        ui.historyLoadingState.classList.add('hidden');
+                        resolve();
+                    },
+                    error: function(error) {
+                        ui.historyLoadingState.classList.add('hidden');
+                        ui.historyErrorState.classList.remove('hidden');
+                        resolve();
+                    }
+                });
             });
         }
 
@@ -947,7 +981,7 @@
                 
                 const dateKey = Object.keys(row).find(k => k.toLowerCase().includes('tanggal') || k.toLowerCase().includes('date')) || 'tanggal';
                 const provKey = Object.keys(row).find(k => k.toLowerCase().includes('prov')) || 'provinsi';
-                const picKey = Object.keys(row).find(k => k.toLowerCase().includes('pic' ) || k.toLowerCase().includes('jawab')) || 'pic';
+                const picKey = Object.keys(row).find(k => k.toLowerCase().includes('pic') || k.toLowerCase().includes('jawab')) || 'pic';
                 const valKey = Object.keys(row).find(k => k.toLowerCase().includes('progres') || k.toLowerCase().includes('persentase') || k.toLowerCase().includes('%') || k.toLowerCase().includes('nilai')) || Object.keys(row)[2] || 'nilai';
 
                 tr.innerHTML = `
